@@ -14,7 +14,10 @@ public class QuadTreeTerrain : MonoBehaviour
     public float SizeInUnits = 256.0f;
 
     // Use this for initialization
-    void Start() { GenerateGeometry();}
+    void Start()
+    {
+        GenerateGeometry();
+    }
 
     // Update is called once per frame
     void Update()
