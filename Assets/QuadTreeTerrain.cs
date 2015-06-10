@@ -1,6 +1,5 @@
-﻿using UnityEngine;
-using System.Collections;
-using System.Linq;
+﻿using System.Linq;
+using UnityEngine;
 
 public class QuadTreeTerrain : MonoBehaviour
 {
@@ -42,11 +41,6 @@ public class QuadTreeTerrain : MonoBehaviour
 
         if(isDirty)
             GenerateGeometry();
-    }
-
-    public void UpdateChildren()
-    {
-
     }
 
     private int MaxDepth()
@@ -118,21 +112,16 @@ public class QuadTreeTerrain : MonoBehaviour
             terrain.depth = newDepth;
             terrain.transform.parent = transform;
             var local1 = terrain.transform.localPosition;
+            local1.x = childSize*0.5f;
+            local1.z = childSize*0.5f;
             terrain.transform.localPosition = local1;
         }
 
-        var local = _children[0].transform.localPosition;
-        local.x = childSize*0.5f;
-        local.z = childSize*0.5f;
-        _children[0].transform.localPosition = local;
-
-        local = _children[1].transform.localPosition;
+        var local = _children[1].transform.localPosition;
         local.x = -childSize*0.5f;
-        local.z = childSize*0.5f;
         _children[1].transform.localPosition = local;
 
         local = _children[2].transform.localPosition;
-        local.x = childSize*0.5f;
         local.z = -childSize*0.5f;
         _children[2].transform.localPosition = local;
 
