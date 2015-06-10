@@ -1,8 +1,10 @@
 ﻿using UnityEngine;
 using System.Collections;
 
-public class Planet : MonoBehaviour {
-    private GameObject[] _sides = new GameObject[6];
+public class Planet : MonoBehaviour
+{
+    private QuadTreeTerrain terrain;
+
     public float SurfaceRadius = 128.0f;
     public float AtmosphereAltitude = 128.0f;
 

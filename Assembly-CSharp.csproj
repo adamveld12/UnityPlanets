@@ -48,6 +48,7 @@
   <ItemGroup>
      <Compile Include="Assets\Planet.cs" />
      <Compile Include="Assets\QuadTreeTerrain.cs" />
+     <Compile Include="Assets\QuadTreeTerrainNode.cs" />
  <Reference Include="UnityEngine.UI">
  <HintPath>D:/Games/Unity/Editor/Data/UnityExtensions/Unity/GUISystem/UnityEngine.UI.dll</HintPath>
  </Reference>
