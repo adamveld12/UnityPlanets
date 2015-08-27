@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 namespace Assets.Planet
@@ -8,13 +9,15 @@ namespace Assets.Planet
     {
         private QuadTreeNode[] _children;
         private QuadTreeNode _parent;
+        private readonly Vector3 _localCenter;
 
-        public QuadTreeNode(QuadTreeNode parent) : this(parent, parent.Size/2) { }
-        public QuadTreeNode(float size) : this(null, size) { }
+        public QuadTreeNode(QuadTreeNode parent) : this(parent, parent.Size/2, parent._localCenter) { }
+        public QuadTreeNode(float size, Vector3 localCenter) : this(null, size, localCenter) { }
 
-        private QuadTreeNode(QuadTreeNode parent, float size)
+        private QuadTreeNode(QuadTreeNode parent, float size, Vector3 localCenter)
         {
             _parent = parent;
+            _localCenter = localCenter;
             IsDirty = true;
             Size = size;
             Depth = _parent == null ? 0 : _parent.Depth + 1;
@@ -30,7 +33,7 @@ namespace Assets.Planet
         public List<Vector3> GenerateModel()
         {
             List<Vector3> model = new List<Vector3>();
-            if (IsLeaf)
+            if (IsLeaf && IsDirty)
             {
 
                
@@ -44,10 +47,6 @@ namespace Assets.Planet
             return model;
         }
 
-        private void Generate()
-        {
-        }
-
         /// <summary>
         /// only split one level per frame
         /// </summary>
@@ -55,7 +54,7 @@ namespace Assets.Planet
         {
             if (IsLeaf)
             {
-                if (Depth >= MaxSplitDepth)
+                if (Depth >= 17)
                     return;
 
                 IsDirty = false;
@@ -114,6 +113,12 @@ namespace Assets.Planet
 
             foreach (var child in _children)
                 operation.Invoke(child);
+        }
+
+
+        public bool IsDeepDirty()
+        {
+            return IsLeaf && IsDirty || _children.Any(x => x.IsDeepDirty());
         }
 
         public float Size { get; private set; }
