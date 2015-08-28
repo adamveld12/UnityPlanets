@@ -7,44 +7,92 @@ namespace Assets.Planet
 {
     public class QuadTreeNode
     {
+        private Vector3[] _vertsCache;
+        private int[] _indicesCache;
+        private bool _isLeaf = true;
+
         private QuadTreeNode[] _children;
-        private QuadTreeNode _parent;
-        private readonly Vector3 _localCenter;
+        private bool _isDirty;
+        private readonly QuadTreeNode _parent;
 
-        public QuadTreeNode(QuadTreeNode parent) : this(parent, parent.Size/2, parent._localCenter) { }
-        public QuadTreeNode(float size, Vector3 localCenter) : this(null, size, localCenter) { }
+        public QuadTreeNode(QuadTreeNode parent) : this(parent, new GNodeTransform {Parent = parent.Location}, parent.Size*0.5f) { }
 
-        private QuadTreeNode(QuadTreeNode parent, float size, Vector3 localCenter)
+        public QuadTreeNode(Vector3 location, float size) : this(null, new GNodeTransform { Location = location }, size) {}
+
+        private QuadTreeNode(QuadTreeNode parent, GNodeTransform location, float size)
         {
+            _isDirty = true;
+            _children = null;
             _parent = parent;
-            _localCenter = localCenter;
-            IsDirty = true;
+
+            Location = location;
             Size = size;
-            Depth = _parent == null ? 0 : _parent.Depth + 1;
+            Depth = parent?.Depth + 1 ?? 0;
         }
 
         public void Update(Vector3 camPosition)
         {
-            var shouldSplit = false;
+            var distance = (Location.TransformVector - camPosition).magnitude;
+            
+            var splitDistance = Size * Size;
+            var shouldSplit = distance < splitDistance;
+
+            if (!IsLeaf)
+                ForEachChild(x => x.Update(camPosition));
+
             if (IsLeaf && shouldSplit)
                 Split();
+            else if (!IsLeaf && !shouldSplit)
+                Collapse();
         }
 
-        public List<Vector3> GenerateModel()
+
+        public void GenerateModel(out Vector3[] verts, out int[] indices)
         {
-            List<Vector3> model = new List<Vector3>();
-            if (IsLeaf && IsDirty)
+            if (IsLeaf && _vertsCache != null)
             {
-
-               
-            }
-            else
-            {
-                foreach (var child in _children)
-                    model.AddRange(child.GenerateModel());
+                verts = _vertsCache;
+                indices = _indicesCache;
             }
 
-            return model;
+            if (IsLeaf)
+            {
+                var location = Location.TransformVector;
+                Vector2[] uvs;
+                GeometryHelper.Plane(Size, out verts, out indices, out uvs);
+                verts = verts.Select(x => new Vector3(x.x + location.x, x.y + location.y, x.z + location.z)).ToArray();
+                _vertsCache = verts;
+                _indicesCache = indices;
+            }
+            else 
+            {
+                var completeVertices = new List<Vector3>(_childCount * 4);
+                var completeIndices = new List<int>(_childCount * 6);
+                
+                for (var i = 0; i < _children.Length; i++)
+                {
+                    var child = _children[i];
+
+                    Vector3[] childVerts;
+                    int[] childIndices;
+
+                    if (child._vertsCache != null && child.IsLeaf)
+                    {
+                        childVerts = child._vertsCache;
+                        childIndices = child._indicesCache;
+                    }
+                    else
+                        child.GenerateModel(out childVerts, out childIndices);
+
+                    completeIndices.AddRange(childIndices.Select(index =>  completeVertices.Count + index));
+                    completeVertices.AddRange(childVerts);
+                }
+
+                verts = completeVertices.ToArray();
+                indices = completeIndices.ToArray();
+            }
+
+            _isDirty = false;
         }
 
         /// <summary>
@@ -52,58 +100,43 @@ namespace Assets.Planet
         /// </summary>
         public void Split()
         {
-            if (IsLeaf)
+              if (Depth >= 17)
+                  return;
+
+            if (_children == null)
             {
-                if (Depth >= 17)
-                    return;
 
-                IsDirty = false;
+                var childSize = Size*0.25f;
+                Vector3[] centerPoints = {
+                   new Vector3(-childSize, 0, childSize),
+                   new Vector3(childSize, 0, childSize),
+                   new Vector3(-childSize, 0, -childSize),
+                   new Vector3(childSize, 0, -childSize)
+                };
 
-
-                Debug.Log("updating mesh to be invisible");
-
-                var myPos = transform.localPosition;
-                _children = new[] {
-                 new QuadTreeNode(this), 
-                 new QuadTreeNode(this), 
-                 new QuadTreeNode(this), 
-                 new QuadTreeNode(this), 
-               };
-
-                foreach (var terrain in _children)
+                _children = new QuadTreeNode[4];
+                for (int i = 0; i < _children.Length; i++)
                 {
-                    //            var local1 = terrain.transform.localPosition;
-                    //            local1.x = childSize*0.5f;
-                    //            local1.z = childSize*0.5f;
-                    //            terrain.transform.localPosition = local1;
+                    _children[i] = new QuadTreeNode(this) {
+                        Location = {
+                            Location = centerPoints[i]
+                        }
+                    };
                 }
 
-                //        var local = _children[1].transform.localPosition;
-                //        local.x = -childSize*0.5f;
-                //        _children[1].transform.localPosition = local;
-                //
-                //        local = _children[2].transform.localPosition;
-                //        local.z = -childSize*0.5f;
-                //        _children[2].transform.localPosition = local;
-                //
-                //        local = _children[3].transform.localPosition;
-                //        local.x = -childSize*0.5f;
-                //        local.z = -childSize*0.5f;
-                //        _children[3].transform.localPosition = local;
             }
+
+            _isLeaf = false;
+            PropagateChange();
         }
 
         public void Collapse()
         {
-            if (!IsLeaf)
-            {
-                ForEachChild(node => {
-                    node.Collapse();
-                });
+            if (IsLeaf) return;
 
-                _children = null;
-                IsDirty = true;
-            }
+            _isLeaf = true;
+            ForEachChild(node => node.Collapse());
+            PropagateChange();
         }
 
         private void ForEachChild(Action<QuadTreeNode> operation)
@@ -115,18 +148,26 @@ namespace Assets.Planet
                 operation.Invoke(child);
         }
 
-
-        public bool IsDeepDirty()
+        private void PropagateChange()
         {
-            return IsLeaf && IsDirty || _children.Any(x => x.IsDeepDirty());
+            _isDirty = true;
+            _parent?.PropagateChange();
+            _childCount = CountChildren();
         }
 
-        public float Size { get; private set; }
-        public int Depth { get; private set; }
-        public bool IsDirty { get; private set; }
-        public bool IsLeaf
+        private int CountChildren()
         {
-            get { return _children == null; }
+            if (IsLeaf)
+                return 0;
+
+            return _children.Length + _children.Sum(x => x.CountChildren());
         }
+
+        private int _childCount = 0;
+        public float Size { get; }
+        public int Depth { get; }
+        public bool IsDirty => _isDirty;
+        public bool IsLeaf => _isLeaf;
+        public GNodeTransform Location { get; set; }
     }
 }
