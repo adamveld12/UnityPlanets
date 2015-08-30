@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Assets.Planet
@@ -16,8 +17,8 @@ namespace Assets.Planet
         public float SurfaceRadius = 0;
 
         private QuadTreeNode _root;
-
         private bool _init;
+        private List<GameObject> _gameObjects = new List<GameObject>();
 
         void Start()
         {
@@ -38,19 +39,19 @@ namespace Assets.Planet
 
             if (_root.IsDirty)
             {
-                Vector3[] verts;
-                int[] indices;
+                _gameObjects.ForEach(DestroyImmediate);
+                _gameObjects.Clear();
 
-                _root.GenerateModel(out verts, out indices);
+                int meshId = 0;
+                var meshDefs = _root.GenerateModel();
+                foreach (var meshDef in meshDefs)
+                {
+                    var go = new GameObject($"terrain sub node {meshId++}");
+                    go.AddComponent<MeshFilter>().mesh = meshDef.ToMesh();
+                    go.AddComponent<MeshRenderer>();
 
-                var mesh = new Mesh {
-                    vertices = verts,
-                    triangles = indices
-                };
-
-                mesh.RecalculateNormals();
-
-                GetComponent<MeshFilter>().mesh = mesh;
+                    _gameObjects.Add(go);
+                }
             }
         }
     }

@@ -7,8 +7,8 @@ namespace Assets.Planet
 {
     public class QuadTreeNode
     {
-        private Vector3[] _vertsCache;
-        private int[] _indicesCache;
+        private MeshDef _meshCache;
+
         private bool _isLeaf = true;
 
         private QuadTreeNode[] _children;
@@ -34,7 +34,7 @@ namespace Assets.Planet
         {
             var distance = (Location.TransformVector - camPosition).magnitude;
             
-            var splitDistance = Size * Size;
+            var splitDistance = Size;
             var shouldSplit = distance < splitDistance;
 
             if (!IsLeaf)
@@ -47,52 +47,35 @@ namespace Assets.Planet
         }
 
 
-        public void GenerateModel(out Vector3[] verts, out int[] indices)
+        public IEnumerable<MeshDef> GenerateModel()
         {
-            if (IsLeaf && _vertsCache != null)
+            _isDirty = false;
+            if (IsLeaf && _meshCache != null)
             {
-                verts = _vertsCache;
-                indices = _indicesCache;
+               yield return _meshCache;
+               yield break;
             }
 
             if (IsLeaf)
             {
                 var location = Location.TransformVector;
-                Vector2[] uvs;
-                GeometryHelper.Plane(Size, out verts, out indices, out uvs);
+                Vector3[] verts;
+                int[] indices;
+                GeometryHelper.Patch(Size, out verts, out indices);
                 verts = verts.Select(x => new Vector3(x.x + location.x, x.y + location.y, x.z + location.z)).ToArray();
-                _vertsCache = verts;
-                _indicesCache = indices;
+                _meshCache = new MeshDef(verts, indices);
+                yield return _meshCache;
             }
             else 
             {
-                var completeVertices = new List<Vector3>(_childCount * 4);
-                var completeIndices = new List<int>(_childCount * 6);
-                
                 for (var i = 0; i < _children.Length; i++)
                 {
                     var child = _children[i];
 
-                    Vector3[] childVerts;
-                    int[] childIndices;
-
-                    if (child._vertsCache != null && child.IsLeaf)
-                    {
-                        childVerts = child._vertsCache;
-                        childIndices = child._indicesCache;
-                    }
-                    else
-                        child.GenerateModel(out childVerts, out childIndices);
-
-                    completeIndices.AddRange(childIndices.Select(index =>  completeVertices.Count + index));
-                    completeVertices.AddRange(childVerts);
+                    foreach (var meshDef in child.GenerateModel())
+                        yield return meshDef;
                 }
-
-                verts = completeVertices.ToArray();
-                indices = completeIndices.ToArray();
             }
-
-            _isDirty = false;
         }
 
         /// <summary>
