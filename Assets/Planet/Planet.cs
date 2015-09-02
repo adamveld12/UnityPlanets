@@ -16,6 +16,9 @@ namespace Assets.Planet
         public float AtmosphereAltitude = 0f;
 
 
+        private QuadTreeTerrainNode[] _surfaceNodes;
+
+
         // Use this for initialization
         void Start()
         {
@@ -26,10 +29,54 @@ namespace Assets.Planet
             var terrainHeight = SurfaceRadius*2;
             Debug.LogFormat("Setting up terrain at {0}", terrainHeight);
 
-            var pos = transform.position;
-//            _terrain = new[]{
-//                new TerrainNode(), 
-//            };
+            var size = SurfaceRadius*2;
+            _surfaceNodes = new[] {
+                QuadTreeTerrainNode.CreateParentNode(size),
+                QuadTreeTerrainNode.CreateParentNode(size),
+                QuadTreeTerrainNode.CreateParentNode(size),
+                QuadTreeTerrainNode.CreateParentNode(size),
+                QuadTreeTerrainNode.CreateParentNode(size),
+                QuadTreeTerrainNode.CreateParentNode(size),
+            };
+
+            var normals = new[]
+            {
+                Vector3.up,
+                Vector3.down,
+                Vector3.back,
+                Vector3.forward,
+                Vector3.left,
+                Vector3.right
+            };
+
+
+            /*
+            _root.transform.parent = transform;
+            _root.transform.Translate(new Vector3(0, SurfaceRadius, 0), Space.Self);
+            _root.WorldCenter = transform.position;
+            _root.SurfaceRadius = SurfaceRadius;
+            */
+
+            _surfaceNodes.ForEach((node, index) =>
+            {
+                node.transform.parent = transform;
+
+                var normal = normals[index];
+                node.transform.localPosition = SurfaceRadius*normal;
+
+
+                node.WorldCenter = transform.position;
+                node.SurfaceRadius = SurfaceRadius;
+            });
+
+            var s = _surfaceNodes;
+            s[0].transform.localEulerAngles.Set(0, 0, 0);
+            s[1].transform.localRotation = Quaternion.Euler(180, 0, 0);
+            s[2].transform.localRotation = Quaternion.Euler(270, 0, 0);
+            s[3].transform.localRotation = Quaternion.Euler(90, 0, 0);
+            s[4].transform.localRotation = Quaternion.Euler(0, 0, 90);
+            s[5].transform.localRotation = Quaternion.Euler(0, 0, 270);
+
 
             // if the atmo is at/below zero then we just don't render an atmo at all
             if (AtmosphereAltitude >= 0)

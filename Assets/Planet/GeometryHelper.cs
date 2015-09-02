@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Assets.Planet
@@ -77,6 +78,27 @@ namespace Assets.Planet
                 3, 1, 0,
                 3, 2, 1
             };
+        }
+
+        public static void ForEach<TSource>(this IEnumerable<TSource> source, Action<TSource, int> functor)
+        {
+            if(functor == null)
+                throw new ArgumentNullException("functor");
+
+            var count = 0;
+            foreach (var item in source)
+                functor(item, count++);
+            
+        }
+
+        public static void ForEach<TSource>(this IEnumerable<TSource> source, Action<TSource> functor)
+        {
+            if(functor == null)
+                throw new ArgumentNullException("functor");
+
+            foreach (var item in source)
+                functor(item);
+            
         }
 
     }

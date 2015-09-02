@@ -13,18 +13,23 @@ namespace Assets.Planet
 
         [Tooltip("Surface height. If zero then spherical projection does not happen AKA normal flat terrain.")]
         [SerializeField]
-        public float SurfaceRadius = 0;
+        public float SurfaceRadius = 512;
 
         private QuadTreeTerrainNode _root;
 
         void Start()
         {
-            _root = QuadTreeTerrainNode.CreateParentNode(Size);
+            _root = QuadTreeTerrainNode.CreateParentNode(SurfaceRadius);
             _root.transform.parent = transform;
+            _root.transform.Translate(new Vector3(0, SurfaceRadius, 0), Space.Self);
+            _root.WorldCenter = transform.position;
+            _root.SurfaceRadius = SurfaceRadius;
         }
 
         void Update()
         {
+            _root.Size = Size;
+            _root.SurfaceRadius = SurfaceRadius;
         }
     }
 }

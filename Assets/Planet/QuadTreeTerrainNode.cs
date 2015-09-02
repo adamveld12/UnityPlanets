@@ -12,11 +12,10 @@ namespace Assets.Planet
         private QuadTreeTerrainNode _parent;
         private QuadTreeTerrainNode[] _children;
 
-        private bool _isLeaf = true;
-        private bool _dead;
 
         private int _depth = 1;
         private float _size;
+        private float _surfaceRadius;
 
         public static QuadTreeTerrainNode CreateParentNode(float size)
         {
@@ -33,20 +32,23 @@ namespace Assets.Planet
 
         private static QuadTreeTerrainNode CreateNode(QuadTreeTerrainNode parent, float size)
         {
-            var go = new GameObject(parent == null ? "parent" : string.Format("level {0}", parent.Depth+1), typeof(QuadTreeTerrainNode)) {
-            };
+            var go = new GameObject(parent == null ? "parent" : string.Format("level {0}", parent.Depth+1), typeof(QuadTreeTerrainNode));
 
             var qn = go.GetComponent<QuadTreeTerrainNode>();
 
             qn._children = null;
             qn._size = size;
+            qn.SurfaceRadius = size;
 
             if (parent != null)
             {
                 qn._parent = parent;
                 qn._depth = parent.Depth + 1;
                 qn.transform.parent = parent.transform;
+                qn.WorldCenter = parent.WorldCenter;
+                qn.SurfaceRadius = parent.SurfaceRadius;
             }
+            
 
             var meshFilter = qn.GetComponent<MeshFilter>();
 
@@ -58,6 +60,7 @@ namespace Assets.Planet
 
         public void Start()
         {
+            GenerateModel();
         }
  
         public void Update()
@@ -67,15 +70,6 @@ namespace Assets.Planet
             {
                 var camPos = Camera.main.transform.position;
                 Update(camPos);
-            }
-
-            if (!IsLeaf)
-            {
-                var parentCenter = transform.localPosition;
-                var topLeft = new Vector3(parentCenter.x - Size*0.5f, parentCenter.y + 10, parentCenter.z - Size * 0.5f);
-                var bottomRight = new Vector3(parentCenter.x + Size*0.5f, parentCenter.y + 10, parentCenter.z + Size * 0.5f);
-
-                Debug.DrawLine(transform.TransformPoint(topLeft), transform.TransformPoint(bottomRight), Color.green);
             }
         }
 
@@ -89,7 +83,7 @@ namespace Assets.Planet
             //transform.localRotation.Set(0, 0, 0, 1);
 
             if (!IsLeaf)
-              ForEachChild(x => x.Update(cameraPosition));
+              _children.ForEach(x => x.Update(cameraPosition));
 
             if (IsLeaf && shouldSplit)
                 Split();
@@ -112,6 +106,15 @@ namespace Assets.Planet
 
                 var mesh = meshFilter.mesh;
 
+                verts = verts.Select(vert =>
+                {
+                    var diff = transform.TransformPoint(vert - WorldCenter);
+                    var length = diff.magnitude;
+                    var projected = SurfaceRadius/length*diff;
+
+                    return transform.InverseTransformPoint(projected - WorldCenter);
+                }).ToArray();
+
                 mesh.vertices = verts;
                 mesh.triangles = indices;
                 mesh.RecalculateNormals();
@@ -127,7 +130,6 @@ namespace Assets.Planet
             if (Depth >= 10)
                 return;
 
-            _isLeaf = false;
             GetComponent<MeshRenderer>().enabled = false;
 
             var childOffset = Size*0.25f;
@@ -156,8 +158,6 @@ namespace Assets.Planet
             if (IsLeaf)
             {
                 _parent = null;
-                _dead = true;
-
                 GetComponent<MeshRenderer>().enabled = false;
                 gameObject.transform.SetParent(null, true);
                 Destroy(gameObject);
@@ -167,18 +167,9 @@ namespace Assets.Planet
                 transform.DetachChildren();
                 GetComponent<MeshRenderer>().enabled = true;
 
-                ForEachChild(node => node.Collapse());
+                _children.ForEach(node => node.Collapse());
                 _children = null;
             }
-        }
-
-        private void ForEachChild(Action<QuadTreeTerrainNode> operation)
-        {
-            if (operation == null)
-                throw new ArgumentNullException();
-
-            foreach (var child in _children)
-                operation.Invoke(child);
         }
 
         public int Depth
@@ -191,11 +182,36 @@ namespace Assets.Planet
             get { return _children == null; }
         }
 
+
         public float Size
         {
             get { return _size; }
+            set {
+
+                if (Math.Abs(_size - value) > float.Epsilon)
+                {
+                _size = value; 
+                GenerateModel();
+                    
+                }
+            }
         }
 
         public QuadTreeTerrainNode Parent { get { return _parent; }}
+        public Vector3 WorldCenter { get; set; }
+
+        public float SurfaceRadius
+        {
+            get { return _surfaceRadius; }
+            set
+            {
+                if (Math.Abs(_surfaceRadius - value) > float.Epsilon)
+                {
+                _surfaceRadius = value; 
+                    GenerateModel();
+                    
+                }
+            }
+        }
     }
 }
