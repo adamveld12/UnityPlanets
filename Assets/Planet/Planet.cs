@@ -13,24 +13,51 @@ namespace Assets.Planet
 
         [SerializeField]
         [Tooltip("The end of the atmosphere in kilometers. 0 =< sea level")]
-        public float AtmosphereAltitude = 0f;
+        public float AtmosphereAltitude;
 
 
         private QuadTreeTerrainNode[] _surfaceNodes;
+
+        void Reset()
+        {
+            SurfaceRadius = 128.0f;
+            AtmosphereAltitude = 0;
+
+        }
 
 
         // Use this for initialization
         void Start()
         {
+            InitializePlanetQuads();
+
+            // if the atmo is at/below zero then we just don't render an atmo at all
+            if (AtmosphereAltitude >= 0)
+            {
+                var skyHeight = SurfaceRadius*2 + AtmosphereAltitude;
+                Debug.LogFormat("Setting up sky at {0}", skyHeight);
+
+
+//                _sky = new[]{
+//                    new QuadTreeNode(skyHeight), 
+//                    new QuadTreeNode(skyHeight), 
+//                    new QuadTreeNode(skyHeight), 
+//                    new QuadTreeNode(skyHeight), 
+//                    new QuadTreeNode(skyHeight), 
+//                    new QuadTreeNode(skyHeight)
+//                };
+            }
+        }
+
+        private void InitializePlanetQuads()
+        {
             // create 6 quadtree terrains, 1 for each side of the cube
             // tell them to be at a radius = surface radius
             // make 6 more quad tree terrains, making their radius = atmosphereAlititude + surface radius for atmo scattering stuff
 
-            var terrainHeight = SurfaceRadius*2;
-            Debug.LogFormat("Setting up terrain at {0}", terrainHeight);
-
             var size = SurfaceRadius*2;
-            _surfaceNodes = new[] {
+            _surfaceNodes = new[]
+            {
                 QuadTreeTerrainNode.CreateParentNode(size),
                 QuadTreeTerrainNode.CreateParentNode(size),
                 QuadTreeTerrainNode.CreateParentNode(size),
@@ -49,22 +76,12 @@ namespace Assets.Planet
                 Vector3.right
             };
 
-
-            /*
-            _root.transform.parent = transform;
-            _root.transform.Translate(new Vector3(0, SurfaceRadius, 0), Space.Self);
-            _root.WorldCenter = transform.position;
-            _root.SurfaceRadius = SurfaceRadius;
-            */
-
             _surfaceNodes.ForEach((node, index) =>
             {
                 node.transform.parent = transform;
 
                 var normal = normals[index];
                 node.transform.localPosition = SurfaceRadius*normal;
-
-
                 node.WorldCenter = transform.position;
                 node.SurfaceRadius = SurfaceRadius;
             });
@@ -76,43 +93,12 @@ namespace Assets.Planet
             s[3].transform.localRotation = Quaternion.Euler(90, 0, 0);
             s[4].transform.localRotation = Quaternion.Euler(0, 0, 90);
             s[5].transform.localRotation = Quaternion.Euler(0, 0, 270);
-
-
-            // if the atmo is at/below zero then we just don't render an atmo at all
-            if (AtmosphereAltitude >= 0)
-            {
-                var skyHeight = SurfaceRadius*2 + AtmosphereAltitude;
-                Debug.LogFormat("Setting up sky at {0}", skyHeight);
-
-
-//                _sky = new[]{
-//                    new QuadTreeNode(skyHeight), 
-//                    new QuadTreeNode(skyHeight), 
-//                    new QuadTreeNode(skyHeight), 
-//                    new QuadTreeNode(skyHeight), 
-//                    new QuadTreeNode(skyHeight), 
-//                    new QuadTreeNode(skyHeight)
-//                };
-            }
-
         }
 
-        private void UpdateTerrain()
-        {
-            var transform = Camera.main.transform;
-
-//            if (_terrain != null)
-//            {
-//              foreach (var face in _terrain)
-//                  face.Update(transform.position);
-//            }
-        }
 
         // Update is called once per frame
         void Update()
         {
-            // when camera is far enough away, just hide the planet all together
-            UpdateTerrain();
         }
     }
 }

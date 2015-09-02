@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Linq;
-using System.Security.Cryptography.X509Certificates;
 using UnityEngine;
 
 namespace Assets.Planet
@@ -16,6 +15,7 @@ namespace Assets.Planet
         private int _depth = 1;
         private float _size;
         private float _surfaceRadius;
+        private float _splitDistance;
 
         public static QuadTreeTerrainNode CreateParentNode(float size)
         {
@@ -32,7 +32,10 @@ namespace Assets.Planet
 
         private static QuadTreeTerrainNode CreateNode(QuadTreeTerrainNode parent, float size)
         {
-            var go = new GameObject(parent == null ? "parent" : string.Format("level {0}", parent.Depth+1), typeof(QuadTreeTerrainNode));
+            var go = new GameObject(parent == null ? "parent" : string.Format("level {0}", parent.Depth+1), typeof(QuadTreeTerrainNode))
+            {
+                isStatic = true
+            };
 
             var qn = go.GetComponent<QuadTreeTerrainNode>();
 
@@ -48,7 +51,13 @@ namespace Assets.Planet
                 qn.WorldCenter = parent.WorldCenter;
                 qn.SurfaceRadius = parent.SurfaceRadius;
             }
-            
+
+
+            var meshRenderer = qn.GetComponent<MeshRenderer>();
+
+            meshRenderer.materials = new[] {
+              new Material(Shader.Find("Diffuse")), 
+            };
 
             var meshFilter = qn.GetComponent<MeshFilter>();
 
@@ -76,41 +85,49 @@ namespace Assets.Planet
         public void Update(Vector3 cameraPosition)
         {
             // this will need a vastly more complex algorithm, including dot products linear cam distance and other crap
-            var distance = (transform.position - cameraPosition).magnitude;
-            var splitDistance = Size;
-            var shouldSplit = distance < splitDistance;
+            var diff = transform.position - WorldCenter;
+            var length = diff.magnitude;
+            var projected = SurfaceRadius/length*diff;
+            var distance = (cameraPosition - projected).magnitude;
 
-            //transform.localRotation.Set(0, 0, 0, 1);
+
+            _splitDistance = Size/(Depth*2);
+
+            if (Parent == null)
+              Debug.LogFormat("Camera Distance: {0}  Next Split: {1}  Size {2}", distance, _splitDistance, Size);
+
+
+            Debug.DrawRay(projected, (cameraPosition - projected));
+
+            var shouldSplit = distance > 150 && distance < _splitDistance;
 
             if (!IsLeaf)
-              _children.ForEach(x => x.Update(cameraPosition));
+                _children.ForEach(x => x.Update(cameraPosition));
 
             if (IsLeaf && shouldSplit)
                 Split();
             else if (!IsLeaf && !shouldSplit)
                 Collapse();
+
         }
 
         public void GenerateModel()
         {
             if (IsLeaf)
             {
+                var meshFilter = GetComponent<MeshFilter>();
+                if (meshFilter.mesh == null)
+                    meshFilter.mesh = new Mesh();
+                var mesh = meshFilter.mesh;
+
                 Vector3[] verts;
                 int[] indices;
                 GeometryHelper.Patch(Size, out verts, out indices);
-
-                var meshFilter = GetComponent<MeshFilter>();
-
-                if (meshFilter.mesh == null)
-                    meshFilter.mesh = new Mesh();
-
-                var mesh = meshFilter.mesh;
-
                 verts = verts.Select(vert =>
                 {
-                    var diff = transform.TransformPoint(vert - WorldCenter);
-                    var length = diff.magnitude;
-                    var projected = SurfaceRadius/length*diff;
+                     var diff = transform.TransformPoint(vert - WorldCenter);
+                     var length = diff.magnitude;
+                     var projected = SurfaceRadius/length*diff;
 
                     return transform.InverseTransformPoint(projected - WorldCenter);
                 }).ToArray();
@@ -119,6 +136,7 @@ namespace Assets.Planet
                 mesh.triangles = indices;
                 mesh.RecalculateNormals();
                 mesh.Optimize();
+                mesh.RecalculateBounds();
             }
         }
 
