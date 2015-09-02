@@ -6,8 +6,6 @@ namespace Assets.Planet
     [Serializable]
     public class Planet : MonoBehaviour
     {
-        private QuadTreeNode[] _terrain;
-        //private QuadTreeNode[] _sky;
 
         [SerializeField]
         [Tooltip("Sea level altitude from the center of the planet in meters")]
@@ -26,23 +24,18 @@ namespace Assets.Planet
             // make 6 more quad tree terrains, making their radius = atmosphereAlititude + surface radius for atmo scattering stuff
 
             var terrainHeight = SurfaceRadius*2;
-            Debug.Log($"Setting up terrain at {terrainHeight}");
+            Debug.LogFormat("Setting up terrain at {0}", terrainHeight);
 
             var pos = transform.position;
-            _terrain = new[]{
-                new QuadTreeNode(pos, terrainHeight), 
-                new QuadTreeNode(pos, terrainHeight), 
-                new QuadTreeNode(pos, terrainHeight), 
-                new QuadTreeNode(pos, terrainHeight), 
-                new QuadTreeNode(pos, terrainHeight), 
-                new QuadTreeNode(pos, terrainHeight), 
-            };
+//            _terrain = new[]{
+//                new TerrainNode(), 
+//            };
 
             // if the atmo is at/below zero then we just don't render an atmo at all
             if (AtmosphereAltitude >= 0)
             {
                 var skyHeight = SurfaceRadius*2 + AtmosphereAltitude;
-                Debug.Log($"Setting up sky at {skyHeight}");
+                Debug.LogFormat("Setting up sky at {0}", skyHeight);
 
 
 //                _sky = new[]{
@@ -61,11 +54,11 @@ namespace Assets.Planet
         {
             var transform = Camera.main.transform;
 
-            if (_terrain != null)
-            {
-              foreach (var face in _terrain)
-                  face.Update(transform.position);
-            }
+//            if (_terrain != null)
+//            {
+//              foreach (var face in _terrain)
+//                  face.Update(transform.position);
+//            }
         }
 
         // Update is called once per frame

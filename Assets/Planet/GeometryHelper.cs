@@ -77,13 +77,6 @@ namespace Assets.Planet
                 3, 1, 0,
                 3, 2, 1
             };
-
-//            uvs = new[] {
-//                Vector2.zero,
-//                new Vector2(1, 0),
-//                Vector2.one,
-//                new Vector2(0, 1), 
-//            };
         }
 
     }
