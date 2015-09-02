@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Linq;
+using System.Security.Cryptography.X509Certificates;
 using UnityEngine;
 
 namespace Assets.Planet
@@ -33,7 +34,6 @@ namespace Assets.Planet
         private static QuadTreeTerrainNode CreateNode(QuadTreeTerrainNode parent, float size)
         {
             var go = new GameObject(parent == null ? "parent" : string.Format("level {0}", parent.Depth+1), typeof(QuadTreeTerrainNode)) {
-                isStatic = true,
             };
 
             var qn = go.GetComponent<QuadTreeTerrainNode>();
@@ -43,6 +43,7 @@ namespace Assets.Planet
 
             if (parent != null)
             {
+                qn._parent = parent;
                 qn._depth = parent.Depth + 1;
                 qn.transform.parent = parent.transform;
             }
@@ -67,6 +68,15 @@ namespace Assets.Planet
                 var camPos = Camera.main.transform.position;
                 Update(camPos);
             }
+
+            if (!IsLeaf)
+            {
+                var parentCenter = transform.localPosition;
+                var topLeft = new Vector3(parentCenter.x - Size*0.5f, parentCenter.y + 10, parentCenter.z - Size * 0.5f);
+                var bottomRight = new Vector3(parentCenter.x + Size*0.5f, parentCenter.y + 10, parentCenter.z + Size * 0.5f);
+
+                Debug.DrawLine(transform.TransformPoint(topLeft), transform.TransformPoint(bottomRight), Color.green);
+            }
         }
 
         public void Update(Vector3 cameraPosition)
@@ -75,6 +85,8 @@ namespace Assets.Planet
             var distance = (transform.position - cameraPosition).magnitude;
             var splitDistance = Size;
             var shouldSplit = distance < splitDistance;
+
+            //transform.localRotation.Set(0, 0, 0, 1);
 
             if (!IsLeaf)
               ForEachChild(x => x.Update(cameraPosition));
@@ -100,7 +112,7 @@ namespace Assets.Planet
 
                 var mesh = meshFilter.mesh;
 
-                mesh.vertices = verts.Select(transform.TransformVector).ToArray();
+                mesh.vertices = verts;
                 mesh.triangles = indices;
                 mesh.RecalculateNormals();
                 mesh.Optimize();
@@ -129,10 +141,12 @@ namespace Assets.Planet
             if (_children == null)
                 _children = new QuadTreeTerrainNode[4];
 
+
             for (var i = 0; i < _children.Length; i++)
             {
                 var child = _children[i] = CreateChildNode(this);
                 child.transform.localPosition = centerPoints[i];
+                child.transform.localRotation = new Quaternion(0, 0, 0, 1);
                 child.GenerateModel();
             }
         }
@@ -182,6 +196,6 @@ namespace Assets.Planet
             get { return _size; }
         }
 
-        public QuadTreeTerrainNode Parent { get; set; }
+        public QuadTreeTerrainNode Parent { get { return _parent; }}
     }
 }
