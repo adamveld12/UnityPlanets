@@ -88,23 +88,22 @@ namespace Assets.Planet
             var diff = transform.position - WorldCenter;
             var length = diff.magnitude;
             var projected = SurfaceRadius/length*diff;
-            var distance = (cameraPosition - projected).magnitude;
 
+            var distance = (projected - cameraPosition).magnitude;
 
-            _splitDistance = Size/(Depth);
+            _splitDistance = 2*Size / Depth;
 
             var dot = Vector3.Dot(transform.position.normalized, cameraPosition.normalized);
             var angle = Mathf.Acos(dot) * Mathf.Rad2Deg;
+
             // try to only draw rays from nodes that are facing us.
-            if (angle <= 90)
+            if (angle <= 90 && IsLeaf)
               Debug.DrawRay(projected, (cameraPosition - projected));
 
             if (Parent == null)
               Debug.LogFormat("Camera Distance: {0}  Next Split: {1}  Size {2}", distance, _splitDistance, Size);
 
-
-
-            var shouldSplit = distance > 150 && distance < _splitDistance;
+            var shouldSplit = angle <= 90 && distance < _splitDistance;
 
             if (!IsLeaf)
                 _children.ForEach(x => x.Update(cameraPosition));
