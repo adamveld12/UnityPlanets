@@ -56,7 +56,7 @@ namespace Assets.Planet
             var meshRenderer = qn.GetComponent<MeshRenderer>();
 
             meshRenderer.materials = new[] {
-              new Material(Shader.Find("Diffuse")), 
+              new Material(Shader.Find("Standard")), 
             };
 
             var meshFilter = qn.GetComponent<MeshFilter>();
@@ -91,13 +91,18 @@ namespace Assets.Planet
             var distance = (cameraPosition - projected).magnitude;
 
 
-            _splitDistance = Size/(Depth*2);
+            _splitDistance = Size/(Depth);
+
+            var dot = Vector3.Dot(transform.position.normalized, cameraPosition.normalized);
+            var angle = Mathf.Acos(dot) * Mathf.Rad2Deg;
+            // try to only draw rays from nodes that are facing us.
+            if (angle <= 90)
+              Debug.DrawRay(projected, (cameraPosition - projected));
 
             if (Parent == null)
               Debug.LogFormat("Camera Distance: {0}  Next Split: {1}  Size {2}", distance, _splitDistance, Size);
 
 
-            Debug.DrawRay(projected, (cameraPosition - projected));
 
             var shouldSplit = distance > 150 && distance < _splitDistance;
 
@@ -116,8 +121,6 @@ namespace Assets.Planet
             if (IsLeaf)
             {
                 var meshFilter = GetComponent<MeshFilter>();
-                if (meshFilter.mesh == null)
-                    meshFilter.mesh = new Mesh();
                 var mesh = meshFilter.mesh;
 
                 Vector3[] verts;
@@ -177,7 +180,7 @@ namespace Assets.Planet
             {
                 _parent = null;
                 GetComponent<MeshRenderer>().enabled = false;
-                gameObject.transform.SetParent(null, true);
+                gameObject.transform.parent = null;
                 Destroy(gameObject);
             }
             else
@@ -208,15 +211,11 @@ namespace Assets.Planet
 
                 if (Math.Abs(_size - value) > float.Epsilon)
                 {
-                _size = value; 
-                GenerateModel();
-                    
+                  _size = value; 
+                  GenerateModel();
                 }
             }
         }
-
-        public QuadTreeTerrainNode Parent { get { return _parent; }}
-        public Vector3 WorldCenter { get; set; }
 
         public float SurfaceRadius
         {
@@ -225,11 +224,13 @@ namespace Assets.Planet
             {
                 if (Math.Abs(_surfaceRadius - value) > float.Epsilon)
                 {
-                _surfaceRadius = value; 
-                    GenerateModel();
-                    
+                  _surfaceRadius = value; 
+                  GenerateModel();
                 }
             }
         }
+
+        public QuadTreeTerrainNode Parent { get { return _parent; }}
+        public Vector3 WorldCenter { get; set; }
     }
 }
