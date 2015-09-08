@@ -13,4 +13,7 @@ I'm making a planet out of a quad cube because I haven't broken nearly enough ke
 
 [Atmospheric Scattering paper that will make for excellent toilet reading later](http://www-ljk.imag.fr/Publications/Basilic/com.lmc.publi.PUBLI_Article@11e7cdda2f7_f64b69/article.pdf)
 
+[Real-Time Continuous LOD Terrain
+Rendering With Nested Splitting Space - Seems super helpful](http://www.people.fas.harvard.edu/~yzhu/doc/isef2k1-paper.pdf)
+
 [The motherload](http://vterrain.org/LOD/Papers/)
